@@ -47,7 +47,7 @@ fi
 DISK_PATH="/var/lib/libvirt/images/${VM_NAME}.qcow2"
 
 #size in gb?
-DISK_SIZE=20 
+DISK_SIZE=25 
 
 VIRT_INSTALL_COMMAND="sudo virt-install \
 --name $VM_NAME \
