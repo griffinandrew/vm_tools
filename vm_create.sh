@@ -5,6 +5,7 @@
 #
 #
 #
+
 usage() {
     echo "Usage: $0 -n <VM name> -r <RAM in MB> -c <Number of vCPUs>"
     exit 1
@@ -51,10 +52,10 @@ DISK_SIZE=25
 
 VIRT_INSTALL_COMMAND="sudo virt-install \
 --name $VM_NAME \
---os-variant fedora38 \
+--os-variant fedora41 \
 --vcpus $VCPUS \
 --memory $RAM \
---location https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/38/Server/x86_64/os/ \
+--location https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/41/Server/x86_64/os/ \
 --disk path=$DISK_PATH,size=$DISK_SIZE \
 --network bridge=virbr0,model=virtio \
 --graphics none \
