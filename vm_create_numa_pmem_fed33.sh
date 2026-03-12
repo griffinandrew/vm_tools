@@ -258,7 +258,30 @@ for tag in ('memory', 'currentMemory'):
     if el is None:
         el = ET.SubElement(root, tag)
     el.set('unit', 'MiB')
-    el.text = '${TOTAL_MB}'
+    #el.text = '${TOTAL_MB}'
+    # Set to just DRAM size — total memory is defined by maxMemory, and the
+    # PMEM is added as a separate NUMA cell + nvdimm device, so it doesn't need
+    # to be included in the main <memory> element.
+    el.text = '${RAM_MB}'
+
+
+
+# ── 3. <cputune> — pin each vCPU to a physical CPU ───────────────────────────
+# Remove existing <cputune> if any
+for ct in root.findall('cputune'):
+    root.remove(ct)
+
+cputune = ET.Element('cputune')
+for i in range(${VCPUS}):
+    pin = ET.SubElement(cputune, 'vcpupin')
+    pin.set('vcpu',   str(i))
+    pin.set('cpuset', str(i))
+
+# Insert cputune after <vcpu> element
+vcpu_el = root.find('vcpu')
+vcpu_idx = list(root).index(vcpu_el) if vcpu_el is not None else 1
+root.insert(vcpu_idx + 1, cputune)
+
 
 # ── 3. <cpu> — add <numa> cell topology ──────────────────────────────────────
 cpu_el = root.find('cpu')
@@ -283,7 +306,9 @@ cell1.set('id',     '1')
 # NOTE: no 'cpus' attribute — omitting it entirely is correct for a
 # memory-only NUMA node. Setting cpus='' causes libvirt to reject the
 # XML with "Failed to parse bitmap ''"
-cell1.set('memory', '${PMEM_MB}')
+#cell1.set('memory', '${PMEM_MB}')
+#set to be 1gb hard and reconfigure in guest for pmem to be bound to node 1
+cell1.set('memory', '1024')
 cell1.set('unit',   'MiB')
 
 # ── 4. <devices> — add NVDIMM backed by devdax ───────────────────────────────
@@ -305,7 +330,7 @@ path_el = ET.SubElement(src, 'path')
 path_el.text = '${PMEM_PATH}'
 align_el = ET.SubElement(src, 'alignsize')
 align_el.set('unit', 'KiB')
-align_el.text = '2048'
+align_el.text = '16384'  # 16 MiB alignment recommended for PMEM
 ET.SubElement(src, 'pmem')
 
 tgt = ET.SubElement(nvdimm, 'target')
@@ -356,7 +381,17 @@ echo ""
 echo "  Use PMEM explicitly:"
 echo "    numactl --membind=1 --cpunodebind=0 <your_application>"
 echo ""
-echo "  Online PMEM as DAX-capable RAM inside guest (optional):"
-echo "    sudo daxctl reconfigure-device --mode=system-ram dax1.0"
+echo "  Online PMEM as DAX-capable RAM inside guest:"
+echo "    sudo daxctl list"
+echo "    sudo ndctl"
+echo "    sudo ndctl destroy-namespace namespace0.0 -f"
+echo "    sudo ndctl create-namespace -r region0 --mode=devdax --align=2M"
+echo "    sudo daxctl reconfigure-device dax0.0 --mode=system-ram"
+echo "    sudo daxctl list"
+echo "    maybe also need to online it if not auto-online:"
 echo "    sudo ndctl online-memory nmem0"
 echo "============================================================"
+
+
+
+
