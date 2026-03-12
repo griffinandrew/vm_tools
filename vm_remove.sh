@@ -14,11 +14,11 @@ fi
 
 virsh shutdown "$vm_name"
 
-while virsh list --all | grep -q "\<$vm_name\>"; do
+while virsh list | grep -q "\<$vm_name\>"; do
     echo "Waiting for VM '$vm_name' to shut down..."
     sleep 5
 done
 
-virsh undefine "$vm_name"
+virsh undefine "$vm_name" --remove-all-storage --nvram --snapshots-metadata
 
 echo "VM '$vm_name' has been successfully shutdown and undefined."
