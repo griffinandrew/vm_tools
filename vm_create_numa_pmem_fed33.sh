@@ -281,10 +281,11 @@ for i in range(${VCPUS}):
     pin.set('vcpu',   str(i))
     pin.set('cpuset', str(i))
 
+
 #segment the host cpus for the emulator pinning
-emulator_cpuset = f"${VCPUS}-$((${HOST_CPUS} - 1))"
-emulatorpin = ET.SubElement(cputune, 'emulatorpin')
-emulatorpin.set('cpuset', emulator_cpuset)
+#var for emualtor cpus list
+#emulatorpin = ET.SubElement(cputune, 'emulatorpin')
+#emulatorpin.set('cpuset', emulator_cpuset)
 
 # Insert cputune after <vcpu> element
 vcpu_el = root.find('vcpu')
