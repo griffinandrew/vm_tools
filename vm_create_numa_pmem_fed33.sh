@@ -13,7 +13,7 @@
 #              then start the VM.
 #
 # Usage:
-#   sudo ./create-numa-vm.sh -n <VM_NAME> -r <DRAM_MiB> -c <VCPUS> -d <DEV_DAX_PATH>
+#   sudo ./create-numa-vm.sh -n <VM_NAME> -r <DRAM_MiB> -c <VCPUS> -d <DEV_DAX_PATH> -hv<HOST_VCPU_LIST>
 #
 # Example:
 #   sudo ./create-numa-vm.sh -n numa-vm -r 8192 -c 4 -d /dev/dax0.0
@@ -31,17 +31,18 @@ die()     { echo "[ERROR] $*" >&2; exit 1; }
 
 usage() {
     cat <<EOF
-Usage: $0 -n <VM_NAME> -r <DRAM_MiB> -c <VCPUS> -d <DEV_DAX_PATH>
+Usage: $0 -n <VM_NAME> -r <DRAM_MiB> -c <VCPUS> -d <DEV_DAX_PATH> -p <HOST_CPUS>
 
   -n  VM name
   -r  DRAM size in MiB  (guest NUMA node 0)
   -c  vCPU count        (all assigned to node 0)
   -d  Host devdax path  (e.g. /dev/dax0.0)
+  -p  Host CPU number 
 
 PMEM size is detected automatically from the devdax device.
 
 Example:
-  $0 -n numa-vm -r 8192 -c 4 -d /dev/dax0.0
+  $0 -n numa-vm -r 8192 -c 4 -d /dev/dax0.0 -p 16
 EOF
     exit 1
 }
@@ -53,18 +54,20 @@ VM_NAME=""
 RAM_MB=""
 VCPUS=""
 PMEM_PATH=""
+HOST_CPUS=""
 
-while getopts ":n:r:c:d:" opt; do
+while getopts ":n:r:c:d:p:" opt; do
   case $opt in
     n) VM_NAME="$OPTARG" ;;
     r) RAM_MB="$OPTARG" ;;
     c) VCPUS="$OPTARG" ;;
     d) PMEM_PATH="$OPTARG" ;;
+    p) HOST_CPUS="$OPTARG" ;;
     *) usage ;;
   esac
 done
 
-[[ -z "$VM_NAME" || -z "$RAM_MB" || -z "$VCPUS" ]] && usage
+[[ -z "$VM_NAME" || -z "$RAM_MB" || -z "$VCPUS" || -z "$HOST_CPUS" ]] && usage
 
 # -----------------------------------------------------------------------------
 # STEP 0 — Detect devdax size
@@ -158,6 +161,7 @@ echo "  Total -m : ${TOTAL_MB} MiB"
 echo "  MaxMem   : ${MAX_MEM_MIB} MiB"
 echo "  vCPUs    : $VCPUS"
 echo "  Disk     : $DISK_PATH ($DISK_SIZE)"
+echo "  Host CPUs : $HOST_CPUS to pin to emualtor"
 echo "============================================================"
 echo ""
 read -r -p "Continue? (y/n): " choice
@@ -276,6 +280,11 @@ for i in range(${VCPUS}):
     pin = ET.SubElement(cputune, 'vcpupin')
     pin.set('vcpu',   str(i))
     pin.set('cpuset', str(i))
+
+#segment the host cpus for the emulator pinning
+emulator_cpuset = f"${VCPUS}-$((${HOST_CPUS} - 1))"
+emulatorpin = ET.SubElement(cputune, 'emulatorpin')
+emulatorpin.set('cpuset', emulator_cpuset)
 
 # Insert cputune after <vcpu> element
 vcpu_el = root.find('vcpu')

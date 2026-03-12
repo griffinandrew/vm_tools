@@ -12,7 +12,7 @@ if ! virsh list --all | grep -q "\<$vm_name\>"; then
     exit 1
 fi
 
-virsh shutdown "$vm_name"
+virsh destroy "$vm_name"
 
 while virsh list | grep -q "\<$vm_name\>"; do
     echo "Waiting for VM '$vm_name' to shut down..."
